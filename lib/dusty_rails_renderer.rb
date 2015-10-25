@@ -6,6 +6,7 @@ module DustyRailsRenderer
   	include Singleton
    	attr_writer :configuration
 
+    #Initialize, load Dust.js library, and precompile Dust.js templates
    	def initialize
    		@dust_config = YAML.load_file(self.configuration.dust_config_path)
    		dust_library = File.read(self.configuration.dust_js_library_path)
@@ -16,12 +17,14 @@ module DustyRailsRenderer
 	    read_dust_files
    	end
 
-	def templates
-	  return @precompiled_templates.to_json
-	end
+    #Return precompiled templates in JSON format (Client-side)
+	  def templates
+	    @precompiled_templates.to_json
+	  end
 
+    #Render template registered Dust.js template
    	def render(template_name, json) 
-		if self.configuration.production
+		  if self.configuration.production
 	  		@context.eval("(function() { var result; dust.render('#{template_name}', #{json}, function(err, out) { result = out; }); return result; })()")
 	  	else 
 	  		read_dust_files
@@ -30,6 +33,8 @@ module DustyRailsRenderer
    	end
 
    	private 
+      
+      #Read in and register Dust.js templates
    	  def read_dust_files
   	    @dust_config.each do |template, info|
 	      file_url = self.configuration.dust_template_base_path + info["file_path"]
