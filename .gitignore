@@ -1,3 +1,6 @@
+/dusty_rails_renderer-0.1.0.gem
+/*.gem
+/*.swp
 /.bundle/
 /.yardoc
 /Gemfile.lock
