@@ -9,10 +9,10 @@ module DustyRailsRenderer
     #Initialize, load Dust.js library, and precompile Dust.js templates
     def initialize
       @dust_config = YAML.load_file(self.configuration.dust_config_path)
-      dust_library = File.read(self.configuration.dust_js_library_path)
+      @dust_library = File.read(self.configuration.dust_js_library_path)
       @precompiled_templates = Hash.new
       @context = V8::Context.new
-      @context.eval(dust_library, 'dustjs') 
+      @context.eval(@dust_library, 'dustjs') 
 
       read_dust_files
     end
@@ -22,26 +22,27 @@ module DustyRailsRenderer
       @precompiled_templates.to_json
     end
 
-    #Render template registered Dust.js template
     def render(template_name, json) 
       if self.configuration.production
         @context.eval("(function() { var result; dust.render('#{template_name}', #{json}, function(err, out) { result = out; }); return result; })()")
       else 
+        #Reset Context
+        @context = V8::Context.new
+        @context.eval(@dust_library, 'dustjs') 
+       
         read_dust_files
         @context.eval("(function() { var result; dust.render('#{template_name}', #{json}, function(err, out) { result = out; }); return result; })()")
       end
     end
 
    	private 
-      
     #Read in and register Dust.js templates
     def read_dust_files
       @dust_config.each do |template, info|
         file_url = self.configuration.dust_template_base_path + info["file_path"]
         template_name = info["name"]
         contents = File.read(file_url).gsub("\n","").gsub("\"","'").gsub("\t","")
-        template = @context.eval("dust.compile(\"#{contents}\",'#{template_name}')")
-        @context.eval("dust.loadSource(dust.compile(\"#{contents}\",'#{template_name}'))")
+        template = @context.eval("(function() {var template = dust.compile(\"#{contents}\",'#{template_name}'); dust.loadSource(template); return template; })()")  
         @precompiled_templates[template_name] = template
       end
     end 
