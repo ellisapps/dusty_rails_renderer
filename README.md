@@ -35,6 +35,9 @@ dust_initializer.rb
 	$ 	config.dust_js_library_path = 'app/assets/javascripts/libraries/dust/dust-full.js'
 	$ 	config.dust_template_base_path = 'app/assets/javascripts/dust/'
 	$ 	config.production = false	  
+	$   config.node_dust_compiler = false
+	$ 	config.logging = false
+	$	config.dust_compiler_command =  "dustc"
 	$ end
 
 	$ DustyRailsRenderer.initialize
@@ -42,7 +45,7 @@ dust_initializer.rb
 
 By configuring the initializer you can update the location of your Dust templates and Dust.js library. For this gem to work property you must use the full Dust library that includes the compiler. Lastly, setting config.production = false will enable loading from disk and precompiling during request time. This
 feature is great for debugging and creating new templates but not for production. Setting config.production = true will precompile the templates once
-during the server initialization process and load the templates into memory.
+during the server initialization process and load the templates into memory. Setting config.node_dust_compiler = true will activate precompiling templates with dustc (dustjs-linkedin npm package).
 
 ## Usage
 
