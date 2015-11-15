@@ -93,7 +93,7 @@ module DustyRailsRenderer
       @production = false	  
       @node_dust_compiler = false
       @dust_compiler_command = "dustc"
-      @logging = true
+      @logging = false
     end
   end
 
