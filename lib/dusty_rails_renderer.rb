@@ -11,6 +11,7 @@ module DustyRailsRenderer
       @dust_config = YAML.load_file(self.configuration.dust_config_path)
       @dust_library = File.read(self.configuration.dust_js_library_path)
       @precompiled_templates = Hash.new
+      @last_modification_hash = Hash.new
       @context = V8::Context.new
       @context.eval(@dust_library, 'dustjs') 
 
@@ -35,8 +36,14 @@ module DustyRailsRenderer
     #Read in and register Dust.js templates
     def read_dust_files
       @dust_config.each do |template, info|
-          file_url = self.configuration.dust_template_base_path + info["file_path"]
-          template_name = info["name"]
+        file_url = self.configuration.dust_template_base_path + info["file_path"]
+        template_name = info["name"]
+
+        if @last_modification_hash[template_name] == File.mtime(file_url)
+          next
+        else
+          @last_modification_hash[template_name] = File.mtime(file_url)
+        end
 
         if self.configuration.logging
           puts "file url = #{file_url}"
