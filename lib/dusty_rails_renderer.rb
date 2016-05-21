@@ -1,8 +1,6 @@
 require "dusty_rails_renderer/version"
 require "open3"
-require "google_hash"
-require "libv8"
-require "therubyracer"
+require "rhino"
 
 module DustyRailsRenderer
   class << self
@@ -10,12 +8,12 @@ module DustyRailsRenderer
     attr_writer :configuration
 
     #Initialize, load Dust.js library, and precompile Dust.js templates
-    def initialize
+    def start
       @dust_config = YAML.load_file(self.configuration.dust_config_path)
       @dust_library = File.read(self.configuration.dust_js_library_path)
-      @precompiled_templates = GoogleHashDenseRubyToRuby.new
-      @last_modification_hash = GoogleHashDenseRubyToRuby.new
-      @context = V8::Context.new
+      @precompiled_templates = Hash.new
+      @last_modification_hash = Hash.new
+      @context = Rhino::Context.new
       @context.eval(@dust_library, 'dustjs')
 
       if self.configuration.load_dust_helpers
