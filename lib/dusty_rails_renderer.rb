@@ -1,5 +1,8 @@
 require "dusty_rails_renderer/version"
 require "open3"
+require "google_hash"
+require "libv8"
+require "therubyracer"
 
 module DustyRailsRenderer
   class << self
@@ -10,12 +13,21 @@ module DustyRailsRenderer
     def initialize
       @dust_config = YAML.load_file(self.configuration.dust_config_path)
       @dust_library = File.read(self.configuration.dust_js_library_path)
-      @precompiled_templates = Hash.new
-      @last_modification_hash = Hash.new
+      @precompiled_templates = GoogleHashDenseRubyToRuby.new
+      @last_modification_hash = GoogleHashDenseRubyToRuby.new
       @context = V8::Context.new
-      @context.eval(@dust_library, 'dustjs') 
+      @context.eval(@dust_library, 'dustjs')
+
+      if self.configuration.load_dust_helpers
+        @dust_helpers = File.read(self.configuration.dust_js_helper_path)
+        @context.eval(@dust_helpers, 'dustjs-helpers')
+      end
 
       read_dust_files
+    end
+
+    def get_template(template_name)
+      @precompiled_templates[template_name]
     end
 
     #Return precompiled templates in JSON format (Client-side)
@@ -23,16 +35,16 @@ module DustyRailsRenderer
       @precompiled_templates.to_json
     end
 
-    def render(template_name, json) 
+    def render(template_name, json)
       if self.configuration.production
         @context.eval("(function() { var result; dust.render('#{template_name}', #{json}, function(err, out) { result = out; }); return result; })()")
-      else 
+      else
         read_dust_files
         @context.eval("(function() { var result; dust.render('#{template_name}', #{json}, function(err, out) { result = out; }); return result; })()")
       end
     end
 
-   	private 
+   	private
     #Read in and register Dust.js templates
     def read_dust_files
       @dust_config.each do |template, info|
@@ -62,10 +74,10 @@ module DustyRailsRenderer
 
           @context.eval("dust.loadSource(\"#{escaped_template}\")")
           @precompiled_templates[template_name] = template[0]
-        else 
+        else
           contents = File.read(file_url).gsub("\n","").gsub("\"","'").gsub("\t","")
-          template = @context.eval("(function() {var template = dust.compile(\"#{contents}\",'#{template_name}'); dust.loadSource(template); return template; })()")  
-         
+          template = @context.eval("(function() {var template = dust.compile(\"#{contents}\",'#{template_name}'); dust.loadSource(template); return template; })()")
+
           if self.configuration.logging
             puts "compiled template = #{escaped_template}"
           end
@@ -73,9 +85,9 @@ module DustyRailsRenderer
           @precompiled_templates[template_name] = template
         end
       end
-    end 
+    end
   end
-  
+
   def self.configure
     yield(configuration)
   end
@@ -92,15 +104,19 @@ module DustyRailsRenderer
     attr_accessor :node_dust_compiler
     attr_accessor :logging
     attr_accessor :dust_compiler_command
-    
+    attr_accessor :load_dust_helpers
+    attr_accessor :dust_js_helper_path
+
     def initialize
       @dust_config_path = "config/dust_initializer.yml"
       @dust_js_library_path = "app/assets/javascripts/libraries/dust/dust-full.js"
       @dust_template_base_path = "app/assets/javascripts/dust/"
-      @production = false	  
+      @production = false
       @node_dust_compiler = false
       @dust_compiler_command = "dustc"
       @logging = false
+      @load_dust_helpers = false
+      @dust_js_helper_path = "app/assets/javascripts/libraries/dust/dust-helpers.js"
     end
   end
 
